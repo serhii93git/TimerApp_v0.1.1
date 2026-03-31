@@ -6,7 +6,6 @@ import android.os.IBinder
 import com.example.timerapp.data.AppDatabase
 import com.example.timerapp.data.TimerEntity
 import com.example.timerapp.data.TimerState
-import com.example.timerapp.ui.TimerRingingActivity
 import com.example.timerapp.utils.AlarmScheduler
 import com.example.timerapp.utils.HapticHelper
 import com.example.timerapp.utils.NotificationHelper
@@ -65,7 +64,7 @@ class TimerForegroundService : Service() {
                 val now       = System.currentTimeMillis()
                 val remaining = (timer.endTimeMs - now).coerceAtLeast(0L)
 
-                updateNotification(timer, remaining)
+                updatePersistentNotification()
                 TimerGlanceWidget.updateState(this@TimerForegroundService)
 
                 if (remaining <= 0L) {
@@ -97,17 +96,6 @@ class TimerForegroundService : Service() {
             db.timerDao().markStopped(timer.id)
             AlarmScheduler.cancel(this, timer.id)
 
-            withContext(Dispatchers.Main) {
-                val ringingIntent = Intent(this@TimerForegroundService, TimerRingingActivity::class.java).apply {
-                    putExtra(EXTRA_TIMER_ID, timer.id)
-                    putExtra("TIMER_TITLE", timer.title)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP
-                }
-                startActivity(ringingIntent)
-            }
-
             NotificationHelper.showCompletionNotification(this, timer.id, timer.title)
             HapticHelper.vibrate(this)
         }
@@ -133,15 +121,7 @@ class TimerForegroundService : Service() {
             val remaining = (timer.endTimeMs - now).coerceAtLeast(0L)
             db.timerDao().markPaused(timerId, remaining)
             AlarmScheduler.cancel(this@TimerForegroundService, timerId)
-            val notification = NotificationHelper.buildPersistentNotification(
-                this@TimerForegroundService,
-                timer.title,
-                TimeUtils.formatMillis(remaining),
-                timerId,
-                isPaused = true
-            )
-            val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
-            manager.notify(NOTIF_ID, notification)
+            updatePersistentNotification()
             TimerGlanceWidget.updateState(this@TimerForegroundService)
         }
     }
@@ -157,12 +137,34 @@ class TimerForegroundService : Service() {
         }
     }
 
-    private fun updateNotification(timer: TimerEntity, remaining: Long) {
-        val notification = NotificationHelper.buildPersistentNotification(
-            this, timer.title, TimeUtils.formatMillis(remaining), timer.id, false
-        )
-        val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
-        manager.notify(NOTIF_ID, notification)
+    private suspend fun updatePersistentNotification() {
+        val allTimers = db.timerDao().getAll()
+        val now = System.currentTimeMillis()
+
+        // Пріоритет: найближчий RUNNING таймер, потім перший PAUSED
+        val soonestRunning = allTimers
+            .filter { it.state == TimerState.RUNNING }
+            .minByOrNull { it.endTimeMs }
+
+        if (soonestRunning != null) {
+            val remaining = (soonestRunning.endTimeMs - now).coerceAtLeast(0L)
+            val notification = NotificationHelper.buildPersistentNotification(
+                this, soonestRunning.title, TimeUtils.formatMillis(remaining),
+                soonestRunning.id, isPaused = false
+            )
+            val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+            manager.notify(NOTIF_ID, notification)
+        } else {
+            val firstPaused = allTimers.firstOrNull { it.state == TimerState.PAUSED }
+            if (firstPaused != null) {
+                val notification = NotificationHelper.buildPersistentNotification(
+                    this, firstPaused.title, TimeUtils.formatMillis(firstPaused.remainingMs),
+                    firstPaused.id, isPaused = true
+                )
+                val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+                manager.notify(NOTIF_ID, notification)
+            }
+        }
     }
 
     private suspend fun maybeStopSelf() {
