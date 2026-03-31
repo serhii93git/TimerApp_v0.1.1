@@ -96,6 +96,18 @@ class TimerForegroundService : Service() {
             db.timerDao().markStopped(timer.id)
             AlarmScheduler.cancel(this, timer.id)
 
+            // Dual strategy: startActivity (foreground service має право) + fullScreenIntent як backup
+            withContext(Dispatchers.Main) {
+                val ringingIntent = Intent(this@TimerForegroundService, TimerRingingActivity::class.java).apply {
+                    putExtra(EXTRA_TIMER_ID, timer.id)
+                    putExtra("TIMER_TITLE", timer.title)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+                startActivity(ringingIntent)
+            }
+
             NotificationHelper.showCompletionNotification(this, timer.id, timer.title)
             HapticHelper.vibrate(this)
         }
