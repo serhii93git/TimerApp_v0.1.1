@@ -4,15 +4,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 
-/**
- * Manages drag-and-drop gesture state for LazyColumn.
- *
- * FIX: Uses delta-based offset tracking. The original code set draggingItemOffset
- * to item.offset (absolute viewport position), causing the dragged card to
- * visually jump by its own y-position on drag start. Now we track:
- *   - initialItemOffset: absolute position for hit-testing
- *   - dragDelta: accumulated gesture delta for visual offset (starts at 0)
- */
 class DragDropState(
     val lazyListState: LazyListState,
     private val onDragStartedCallback: () -> Unit,
@@ -23,11 +14,13 @@ class DragDropState(
     var draggingItemIndex by mutableStateOf<Int?>(null)
         private set
 
-    /** Visual offset delta from the item's natural position (starts at 0). */
     var dragDelta by mutableFloatStateOf(0f)
         private set
 
-    /** Absolute viewport offset of the dragged item — used only for hit-testing. */
+    /** Позиція пальця у viewport — для автопрокрутки */
+    var touchY by mutableFloatStateOf(0f)
+        private set
+
     private var initialItemOffset = 0f
 
     val isDragging: Boolean get() = draggingItemIndex != null
@@ -39,22 +32,41 @@ class DragDropState(
                 draggingItemIndex  = item.index
                 initialItemOffset  = item.offset.toFloat()
                 dragDelta          = 0f
+                touchY             = offset.y
                 onDragStartedCallback()
             }
     }
 
     fun onDrag(offset: Offset) {
-        val current = draggingItemIndex ?: return
+        if (draggingItemIndex == null) return
         dragDelta += offset.y
-        // Hit-test using absolute position
+        touchY    += offset.y
+        checkForSwap()
+    }
+
+    /** Викликається після автопрокрутки — компенсує зміщення елементів */
+    fun onAutoScroll(scrolledBy: Float) {
+        if (draggingItemIndex == null) return
+        initialItemOffset -= scrolledBy
+        checkForSwap()
+    }
+
+    private fun checkForSwap() {
+        val current = draggingItemIndex ?: return
         val currentAbsoluteY = initialItemOffset + dragDelta
+
         lazyListState.layoutInfo.visibleItemsInfo
             .firstOrNull { item ->
-                currentAbsoluteY.toInt() in item.offset..(item.offset + item.size) &&
-                item.index != current
+                if (item.index == current) return@firstOrNull false
+                // Threshold: swap тільки коли перетягнули за середину цільового елемента
+                val midpoint = item.offset + item.size / 2
+                if (item.index > current) {
+                    currentAbsoluteY.toInt() > midpoint
+                } else {
+                    currentAbsoluteY.toInt() < midpoint
+                }
             }
             ?.let { target ->
-                // Recalibrate: item swapped, so reset initial to target's position
                 initialItemOffset = target.offset.toFloat()
                 dragDelta = currentAbsoluteY - initialItemOffset
                 onMoveCallback(current, target.index)
@@ -65,12 +77,14 @@ class DragDropState(
     fun onDragEnd() {
         draggingItemIndex = null
         dragDelta = 0f
+        touchY    = 0f
         onDragEndCallback()
     }
 
     fun onDragCancel() {
         draggingItemIndex = null
         dragDelta = 0f
+        touchY    = 0f
         onDragCancelCallback()
     }
 }
