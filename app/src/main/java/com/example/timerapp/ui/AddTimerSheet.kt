@@ -223,7 +223,8 @@ fun WheelPicker(
     displayedValues: Array<String>? = null,
     onValueChange:   (Int) -> Unit
 ) {
-    val textColor = MaterialTheme.colorScheme.onSurface.let {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val textColorInt = MaterialTheme.colorScheme.onSurface.let {
         android.graphics.Color.argb(
             (it.alpha * 255).toInt(),
             (it.red * 255).toInt(),
@@ -235,7 +236,13 @@ fun WheelPicker(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         AndroidView(
             factory  = { ctx ->
-                NumberPicker(ctx).apply {
+                // Якщо темна тема — обгортаємо контекст у DeviceDefault тему
+                val themedCtx = if (isDark) {
+                    android.view.ContextThemeWrapper(ctx, android.R.style.Theme_DeviceDefault)
+                } else {
+                    ctx
+                }
+                NumberPicker(themedCtx).apply {
                     wrapSelectorWheel = true
                     this.displayedValues = null
                     this.minValue = minVal
@@ -243,17 +250,7 @@ fun WheelPicker(
                     if (displayedValues != null) this.displayedValues = displayedValues
                     this.value = value.coerceIn(minVal, maxVal)
                     setOnValueChangedListener { _, _, newVal -> onValueChange(newVal) }
-                    // Колір тексту для темної теми
-                    try {
-                        val field = NumberPicker::class.java.getDeclaredField("mSelectorWheelPaint")
-                        field.isAccessible = true
-                        (field.get(this) as? android.graphics.Paint)?.color = textColor
-                        // Оновити колір для дочірніх EditText
-                        for (i in 0 until childCount) {
-                            (getChildAt(i) as? android.widget.EditText)?.setTextColor(textColor)
-                        }
-                    } catch (_: Exception) { }
-                    invalidate()
+                    applyTextColor(textColorInt)
                 }
             },
             update   = { picker ->
@@ -262,19 +259,24 @@ fun WheelPicker(
                 picker.maxValue = maxVal
                 if (displayedValues != null) picker.displayedValues = displayedValues
                 if (picker.value != value) picker.value = value.coerceIn(minVal, maxVal)
-                // Оновити колір при зміні теми
-                try {
-                    val field = NumberPicker::class.java.getDeclaredField("mSelectorWheelPaint")
-                    field.isAccessible = true
-                    (field.get(picker) as? android.graphics.Paint)?.color = textColor
-                    for (i in 0 until picker.childCount) {
-                        (picker.getChildAt(i) as? android.widget.EditText)?.setTextColor(textColor)
-                    }
-                } catch (_: Exception) { }
-                picker.invalidate()
+                picker.applyTextColor(textColorInt)
             },
             modifier = Modifier.height(120.dp)
         )
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+private fun NumberPicker.applyTextColor(color: Int) {
+    // 1. Wheel paint (невибрані значення зверху/знизу)
+    try {
+        val paintField = NumberPicker::class.java.getDeclaredField("mSelectorWheelPaint")
+        paintField.isAccessible = true
+        (paintField.get(this) as? android.graphics.Paint)?.color = color
+    } catch (_: Exception) { }
+    // 2. EditText (вибране значення по центру)
+    for (i in 0 until childCount) {
+        (getChildAt(i) as? android.widget.EditText)?.setTextColor(color)
+    }
+    invalidate()
 }
