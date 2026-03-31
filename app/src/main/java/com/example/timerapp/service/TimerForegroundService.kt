@@ -6,6 +6,7 @@ import android.os.IBinder
 import com.example.timerapp.data.AppDatabase
 import com.example.timerapp.data.TimerEntity
 import com.example.timerapp.data.TimerState
+import com.example.timerapp.ui.TimerRingingActivity
 import com.example.timerapp.utils.AlarmScheduler
 import com.example.timerapp.utils.HapticHelper
 import com.example.timerapp.utils.NotificationHelper
@@ -153,7 +154,6 @@ class TimerForegroundService : Service() {
         val allTimers = db.timerDao().getAll()
         val now = System.currentTimeMillis()
 
-        // Пріоритет: найближчий RUNNING таймер, потім перший PAUSED
         val soonestRunning = allTimers
             .filter { it.state == TimerState.RUNNING }
             .minByOrNull { it.endTimeMs }
