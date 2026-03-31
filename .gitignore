@@ -1,0 +1,153 @@
+# =========================
+# Android / Kotlin / Gradle
+# =========================
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Local config (SDK path, etc.)
+local.properties
+
+# Wrapper (залишаємо jar, ігноруємо інше)
+gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# =========================
+# Android Studio / IntelliJ
+# =========================
+
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Specific IDE files
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# =========================
+# OS files
+# =========================
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+
+# =========================
+# Logs & temp
+# =========================
+
+*.log
+*.tmp
+*.swp
+*.bak
+
+# =========================
+# APK / AAB / builds
+# =========================
+
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# =========================
+# NDK / CMake
+# =========================
+
+.externalNativeBuild/
+.cxx/
+
+# =========================
+# Kotlin
+# =========================
+
+# Kotlin compiled files
+*.class
+
+# Kotlin metadata
+*.kotlin_module
+
+# =========================
+# Firebase / Google Services
+# =========================
+
+google-services.json
+*.jks
+*.keystore
+
+# =========================
+# Signing configs
+# =========================
+
+keystore.properties
+*.keystore
+*.jks
+
+# =========================
+# Proguard
+# =========================
+
+proguard/
+release/
+
+# =========================
+# Room / DB (optional)
+# =========================
+
+*.db
+*.sqlite
+
+# =========================
+# Test outputs
+# =========================
+
+/test_output/
+/outputs/
+
+# =========================
+# Screenshots / recordings
+# =========================
+
+captures/
+screenshots/
+
+# =========================
+# Misc
+# =========================
+
+*.orig
+*.rej
+*.sublime-workspace
+*.sublime-project
+
+# =========================
+# Environment / secrets
+# =========================
+
+.env
+.env.*
+
+# =========================
+# Node (якщо є RN / tools)
+# =========================
+
+node_modules/
+
+# =========================
+# VS Code
+# =========================
+
+.vscode/

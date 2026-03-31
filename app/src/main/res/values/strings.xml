@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TimerApp</string>
+
+    <string name="channel_persistent_name">Timer Running</string>
+    <string name="channel_persistent_desc">Shows the currently active timer countdown</string>
+    <string name="channel_completion_name">Timer Complete</string>
+    <string name="channel_completion_desc">Alerts when a timer finishes</string>
+
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_restart">Restart</string>
+    <string name="action_add">Add Timer</string>
+
+    <string name="timer_paused">Paused</string>
+    <string name="timer_stopped">Finished</string>
+
+    <string name="onboarding_title">Welcome to TimerApp</string>
+    <string name="onboarding_body">For correct and stable operation, please grant the following permissions.</string>
+    <string name="requesting_in_seconds">Requesting permissions in %1$ds\u2026</string>
+
+    <string name="permission_notifications">Notifications</string>
+    <string name="permission_exact_alarm">Exact Alarms</string>
+    <string name="permission_battery">Battery Optimisation</string>
+
+    <string name="no_timers">No timers yet.\nTap + to add one.</string>
+    <string name="drag_handle">Drag to reorder</string>
+    <string name="settings">Settings</string>
+
+    <string name="tab_countdown">Countdown</string>
+    <string name="tab_exact_time">Exact Time</string>
+    <string name="timer_title_label">Timer name</string>
+    <string name="days">Days</string>
+    <string name="hours">Hours</string>
+    <string name="minutes">Minutes</string>
+    <string name="seconds">Seconds</string>
+    <string name="day">Day</string>
+    <string name="month">Month</string>
+    <string name="year">Year</string>
+    <string name="hour">Hour</string>
+    <string name="minute">Minute</string>
+    <string name="loop_timer">Loop timer</string>
+    <string name="add_timer_title">Add Timer</string>
+    <string name="edit_timer_title">Edit Timer</string>
+
+    <string name="error_invalid_duration">Duration must be greater than zero.</string>
+    <string name="error_past_time">Scheduled time must be in the future.</string>
+
+    <string name="settings_title">Sort Order</string>
+    <string name="sort_custom">Custom Order (Drag &amp; Drop)</string>
+    <string name="sort_time_asc">Time Remaining: Ascending</string>
+    <string name="sort_time_desc">Time Remaining: Descending</string>
+
+    <string name="notification_completion_title">Timer Complete!</string>
+    <string name="no_active_timer">No active timer</string>
+
+    <string name="times_up">Time\'s up!</string>
+</resources>

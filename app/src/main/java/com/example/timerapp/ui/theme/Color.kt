@@ -1,0 +1,33 @@
+package com.example.timerapp.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+val Lavender      = Color(0xFF9C84D4)
+val PaleLilac     = Color(0xFFEDE7F6)
+val PastelMint    = Color(0xFF6ECFAA)
+val LightMint     = Color(0xFFC8F0E0)
+val SoftPeach     = Color(0xFFE8967A)
+val PalePeach     = Color(0xFFFDD9CC)
+val OffWhiteLav   = Color(0xFFF5F3FA)
+val MutedPurple   = Color(0xFF5C5473)
+val SoftRose      = Color(0xFFEF9A9A)
+val DarkPurple    = Color(0xFF1A1730)
+val MediumLavender= Color(0xFF7B5EA7)
+val OutlineGray   = Color(0xFFCAC4D0)
+val SurfaceWhite  = Color(0xFFFFFFFF)
+val White         = Color(0xFFFFFFFF)
+
+val DarkLavender       = Color(0xFFCFBCFF)
+val DarkOnLavender     = Color(0xFF21005D)
+val DarkLavenderCont   = Color(0xFF4F378B)
+val DarkOnLavCont      = Color(0xFFEADDFF)
+val DarkMint           = Color(0xFF6ECFAA)
+val DarkOnMint         = Color(0xFF00391F)
+val DarkPeach          = Color(0xFFFFB5A0)
+val DarkPeachCont      = Color(0xFF6E2D1E)
+val DarkBG             = Color(0xFF1C1B1F)
+val DarkSurface        = Color(0xFF1C1B1F)
+val DarkSurfaceVariant = Color(0xFF49454F)
+val DarkOnSurfaceVar   = Color(0xFFCAC4D0)
+val DarkOutline        = Color(0xFF938F99)
+val DarkError          = Color(0xFFCF6679)

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        CRITICAL: Parent MUST be android:Theme.Material.Light.NoActionBar.
+        DO NOT use Theme.MaterialComponents.* — causes AAPT2 linking errors
+        because com.google.android.material:material is intentionally excluded.
+        Compose renders on Canvas and does not consume XML theme attributes.
+    -->
+    <style name="Theme.TimerApp" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">#7B5EA7</item>
+        <item name="android:navigationBarColor">#7B5EA7</item>
+    </style>
+</resources>
