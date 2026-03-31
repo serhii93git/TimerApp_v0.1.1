@@ -223,6 +223,15 @@ fun WheelPicker(
     displayedValues: Array<String>? = null,
     onValueChange:   (Int) -> Unit
 ) {
+    val textColor = MaterialTheme.colorScheme.onSurface.let {
+        android.graphics.Color.argb(
+            (it.alpha * 255).toInt(),
+            (it.red * 255).toInt(),
+            (it.green * 255).toInt(),
+            (it.blue * 255).toInt()
+        )
+    }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         AndroidView(
             factory  = { ctx ->
@@ -234,6 +243,17 @@ fun WheelPicker(
                     if (displayedValues != null) this.displayedValues = displayedValues
                     this.value = value.coerceIn(minVal, maxVal)
                     setOnValueChangedListener { _, _, newVal -> onValueChange(newVal) }
+                    // Колір тексту для темної теми
+                    try {
+                        val field = NumberPicker::class.java.getDeclaredField("mSelectorWheelPaint")
+                        field.isAccessible = true
+                        (field.get(this) as? android.graphics.Paint)?.color = textColor
+                        // Оновити колір для дочірніх EditText
+                        for (i in 0 until childCount) {
+                            (getChildAt(i) as? android.widget.EditText)?.setTextColor(textColor)
+                        }
+                    } catch (_: Exception) { }
+                    invalidate()
                 }
             },
             update   = { picker ->
@@ -242,6 +262,16 @@ fun WheelPicker(
                 picker.maxValue = maxVal
                 if (displayedValues != null) picker.displayedValues = displayedValues
                 if (picker.value != value) picker.value = value.coerceIn(minVal, maxVal)
+                // Оновити колір при зміні теми
+                try {
+                    val field = NumberPicker::class.java.getDeclaredField("mSelectorWheelPaint")
+                    field.isAccessible = true
+                    (field.get(picker) as? android.graphics.Paint)?.color = textColor
+                    for (i in 0 until picker.childCount) {
+                        (picker.getChildAt(i) as? android.widget.EditText)?.setTextColor(textColor)
+                    }
+                } catch (_: Exception) { }
+                picker.invalidate()
             },
             modifier = Modifier.height(120.dp)
         )
