@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.delay
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,6 +41,34 @@ fun TimerScreen(viewModel: TimerViewModel = hiltViewModel()) {
         onDragEnd     = { viewModel.persistOrder() },
         onDragCancel  = { viewModel.cancelDrag() }
     )
+
+    // Автопрокрутка LazyColumn коли палець біля верхнього/нижнього краю
+    LaunchedEffect(dragDropState.isDragging) {
+        if (!dragDropState.isDragging) return@LaunchedEffect
+        val scrollThreshold = 60f
+        while (dragDropState.isDragging) {
+            val layoutInfo = lazyListState.layoutInfo
+            val viewportStart = layoutInfo.viewportStartOffset.toFloat()
+            val viewportEnd   = layoutInfo.viewportEndOffset.toFloat()
+            val touchY = dragDropState.touchY
+
+            val scrollSpeed = when {
+                touchY < viewportStart + scrollThreshold ->
+                    -(viewportStart + scrollThreshold - touchY).coerceIn(0f, scrollThreshold) * 1.5f
+                touchY > viewportEnd - scrollThreshold ->
+                    (touchY - viewportEnd + scrollThreshold).coerceIn(0f, scrollThreshold) * 1.5f
+                else -> 0f
+            }
+
+            if (scrollSpeed != 0f) {
+                lazyListState.scroll(MutatePriority.PreventUserInput) {
+                    val scrolled = scrollBy(scrollSpeed)
+                    dragDropState.onAutoScroll(scrolled)
+                }
+            }
+            delay(16L)
+        }
+    }
 
     Scaffold(
         topBar = {
