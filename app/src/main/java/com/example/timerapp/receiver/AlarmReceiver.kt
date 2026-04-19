@@ -4,10 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
-import com.example.timerapp.data.AppDatabase
 import com.example.timerapp.service.TimerForegroundService
-import com.example.timerapp.utils.NotificationHelper
-import kotlinx.coroutines.*
 
 class AlarmReceiver : BroadcastReceiver() {
 
@@ -15,27 +12,28 @@ class AlarmReceiver : BroadcastReceiver() {
         val timerId = intent.getIntExtra(TimerForegroundService.EXTRA_TIMER_ID, -1)
         if (timerId == -1) return
 
-        // Hold the CPU briefly so the notification + FSI are processed before Doze resumes.
-        // startActivity() from a BroadcastReceiver is blocked on Android 10+, so we rely on
-        // setFullScreenIntent inside the notification instead.
+        // Brief CPU wake so the FGS has time to come up and launch the alarm UI
+        // before the system slides back into Doze.
         val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         val wakeLock = pm.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
             "TimerApp:AlarmReceiver"
-        ).apply { acquire(10_000L) }
+        )
+        runCatching { wakeLock.acquire(10_000L) }
 
-        val result = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val dao   = AppDatabase.getInstance(context).timerDao()
-                val timer = dao.getById(timerId) ?: return@launch
-                dao.markStopped(timerId)
-
-                NotificationHelper.showCompletionNotification(context, timerId, timer.title)
-            } finally {
-                if (wakeLock.isHeld) runCatching { wakeLock.release() }
-                result.finish()
-            }
+        // Exact-alarm broadcasts are on the FGS-start allowlist even in Doze,
+        // so we hand the completion off to the service. Running inside the FGS
+        // gives us BAL (Background Activity Launch) exemption, which is what
+        // actually lets startActivity(ringingIntent) pop the full-screen
+        // alarm UI regardless of lock/active state.
+        val svcIntent = Intent(context, TimerForegroundService::class.java).apply {
+            action = TimerForegroundService.ACTION_TIMER_COMPLETE
+            putExtra(TimerForegroundService.EXTRA_TIMER_ID, timerId)
+        }
+        try {
+            context.startForegroundService(svcIntent)
+        } finally {
+            if (wakeLock.isHeld) runCatching { wakeLock.release() }
         }
     }
 }

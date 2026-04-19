@@ -20,12 +20,13 @@ import javax.inject.Inject
 class TimerForegroundService : Service() {
 
     companion object {
-        const val ACTION_START       = "ACTION_START"
-        const val ACTION_STOP_TIMER  = "ACTION_STOP_TIMER"
-        const val ACTION_PAUSE       = "ACTION_PAUSE"
-        const val ACTION_RESUME      = "ACTION_RESUME"
-        const val EXTRA_TIMER_ID     = "EXTRA_TIMER_ID"
-        private const val NOTIF_ID   = 1001
+        const val ACTION_START           = "ACTION_START"
+        const val ACTION_STOP_TIMER      = "ACTION_STOP_TIMER"
+        const val ACTION_PAUSE           = "ACTION_PAUSE"
+        const val ACTION_RESUME          = "ACTION_RESUME"
+        const val ACTION_TIMER_COMPLETE  = "ACTION_TIMER_COMPLETE"
+        const val EXTRA_TIMER_ID         = "EXTRA_TIMER_ID"
+        private const val NOTIF_ID       = 1001
     }
 
     @Inject lateinit var db: AppDatabase
@@ -47,10 +48,11 @@ class TimerForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val timerId = intent?.getIntExtra(EXTRA_TIMER_ID, -1) ?: -1
         when (intent?.action) {
-            ACTION_START       -> if (timerId != -1) startTickLoop(timerId)
-            ACTION_STOP_TIMER  -> if (timerId != -1) stopTimer(timerId)
-            ACTION_PAUSE       -> if (timerId != -1) pauseTimer(timerId)
-            ACTION_RESUME      -> if (timerId != -1) resumeTimer(timerId)
+            ACTION_START           -> if (timerId != -1) startTickLoop(timerId)
+            ACTION_STOP_TIMER      -> if (timerId != -1) stopTimer(timerId)
+            ACTION_PAUSE           -> if (timerId != -1) pauseTimer(timerId)
+            ACTION_RESUME          -> if (timerId != -1) resumeTimer(timerId)
+            ACTION_TIMER_COMPLETE  -> if (timerId != -1) completeFromAlarm(timerId)
         }
         return START_STICKY
     }
@@ -111,6 +113,20 @@ class TimerForegroundService : Service() {
 
             NotificationHelper.showCompletionNotification(this, timer.id, timer.title)
             HapticHelper.vibrate(this)
+        }
+    }
+
+    // Entry point for AlarmReceiver. Running inside the FGS guarantees the process
+    // has BAL (Background Activity Launch) exemption, so startActivity in
+    // handleTimerComplete works even when the phone is locked or Dozing.
+    private fun completeFromAlarm(timerId: Int) {
+        serviceScope.launch {
+            tickJobs[timerId]?.cancel()
+            tickJobs.remove(timerId)
+            val timer = db.timerDao().getById(timerId) ?: run { maybeStopSelf(); return@launch }
+            if (timer.state != TimerState.RUNNING) { maybeStopSelf(); return@launch }
+            handleTimerComplete(timer)
+            maybeStopSelf()
         }
     }
 
