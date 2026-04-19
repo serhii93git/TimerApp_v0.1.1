@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
 import androidx.core.app.NotificationCompat
 import com.example.timerapp.R
 import com.example.timerapp.receiver.TimerActionReceiver
@@ -15,7 +16,10 @@ import com.example.timerapp.ui.TimerRingingActivity
 object NotificationHelper {
 
     const val CHANNEL_PERSISTENT = "timer_persistent"
-    const val CHANNEL_COMPLETION  = "timer_completion"
+    // Bumped to v2 so new alarm-grade channel settings apply even for existing installs.
+    // Channel properties are immutable after creation, so a new ID is required.
+    const val CHANNEL_COMPLETION  = "timer_completion_v2"
+    private const val CHANNEL_COMPLETION_LEGACY = "timer_completion"
 
     fun createChannels(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -29,6 +33,14 @@ object NotificationHelper {
             setSound(null, null)
         }
 
+        // Silent channel — TimerRingingActivity owns sound + vibration to avoid
+        // double audio when the activity auto-launches via the full-screen intent.
+        // Alarm-grade attributes still help some OEMs treat this as a real alarm.
+        val alarmAttrs = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
         val completionChannel = NotificationChannel(
             CHANNEL_COMPLETION,
             context.getString(R.string.channel_completion_name),
@@ -36,10 +48,15 @@ object NotificationHelper {
         ).apply {
             description = context.getString(R.string.channel_completion_desc)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            setSound(null, alarmAttrs)
+            enableVibration(false)
+            setBypassDnd(true)
         }
 
         manager.createNotificationChannel(persistentChannel)
         manager.createNotificationChannel(completionChannel)
+        // Clean up the legacy channel so old settings don't linger in app info.
+        runCatching { manager.deleteNotificationChannel(CHANNEL_COMPLETION_LEGACY) }
     }
 
     fun buildPersistentNotification(
