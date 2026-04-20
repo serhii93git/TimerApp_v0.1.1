@@ -14,7 +14,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.timerapp.R
 import com.example.timerapp.data.TimerEntity
+import java.text.DateFormatSymbols
 import java.util.Calendar
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +46,15 @@ fun AddTimerSheet(
     val errPastTime      = stringResource(R.string.error_past_time)
 
     val now = Calendar.getInstance()
-    val months = arrayOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+    // Локалізовані короткі назви місяців; shortMonths повертає 13 елементів
+    // (останній порожній для не-грегоріанських календарів) — беремо перші 12.
+    val months = remember {
+        DateFormatSymbols.getInstance(Locale.getDefault())
+            .shortMonths
+            .filter { it.isNotEmpty() }
+            .take(12)
+            .toTypedArray()
+    }
 
     var timerName   by rememberSaveable { mutableStateOf(editingTimer?.title ?: "") }
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -65,10 +75,22 @@ fun AddTimerSheet(
     LaunchedEffect(editingTimer) {
         editingTimer?.let { t ->
             val totalSec = t.durationMs / 1000L
-            pickDays    = (totalSec / 86400L).toInt()
+            pickDays    = (totalSec / 86400L).toInt().coerceAtMost(364)
             pickHours   = ((totalSec % 86400L) / 3600L).toInt()
             pickMinutes = ((totalSec % 3600L) / 60L).toInt()
             pickSeconds = (totalSec % 60L).toInt()
+
+            // Також наповнюємо вкладку exact-time з endTimeMs, щоб користувач
+            // міг переключитись і редагувати як точний час, не втрачаючи даних.
+            if (t.endTimeMs > 0L) {
+                val cal = Calendar.getInstance().apply { timeInMillis = t.endTimeMs }
+                val currentYear = now.get(Calendar.YEAR)
+                exactDay    = cal.get(Calendar.DAY_OF_MONTH)
+                exactMonth  = cal.get(Calendar.MONTH) + 1
+                exactYear   = cal.get(Calendar.YEAR).coerceIn(currentYear, currentYear + 10)
+                exactHour   = cal.get(Calendar.HOUR_OF_DAY)
+                exactMinute = cal.get(Calendar.MINUTE)
+            }
         }
     }
 

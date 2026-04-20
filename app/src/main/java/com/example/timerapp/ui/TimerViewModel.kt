@@ -94,14 +94,14 @@ class TimerViewModel @Inject constructor(
 
     fun addTimer(title: String, durationMs: Long, endTimeMs: Long, isLooping: Boolean) {
         viewModelScope.launch {
-            val currentCount = repo.getAll().size
+            val nextIndex = repo.getNextOrderIndex()
             val timer = TimerEntity(
                 title       = title,
                 durationMs  = durationMs,
                 endTimeMs   = endTimeMs,
                 state       = TimerState.RUNNING,
                 remainingMs = 0L,
-                orderIndex  = currentCount,
+                orderIndex  = nextIndex,
                 isLooping   = isLooping
             )
             val id = repo.insert(timer)
@@ -132,7 +132,7 @@ class TimerViewModel @Inject constructor(
         viewModelScope.launch {
             AlarmScheduler.cancel(context, timer.id)
             stopService(timer.id)
-            repo.delete(timer)
+            repo.deleteAndReindex(timer)
         }
     }
 

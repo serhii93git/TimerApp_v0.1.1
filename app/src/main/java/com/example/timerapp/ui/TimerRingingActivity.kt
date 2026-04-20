@@ -50,8 +50,21 @@ class TimerRingingActivity : ComponentActivity() {
             )
         }
 
-        val timerId    = intent.getIntExtra(TimerForegroundService.EXTRA_TIMER_ID, -1)
-        val timerTitle = intent.getStringExtra("TIMER_TITLE") ?: getString(R.string.app_name)
+        val timerId = intent.getIntExtra(TimerForegroundService.EXTRA_TIMER_ID, -1)
+        // Title may be null when launched from onStartCommand before the DB fetch
+        // finished (we prioritise launching the activity fast). Loaded async below.
+        val timerTitleState = mutableStateOf(
+            intent.getStringExtra("TIMER_TITLE") ?: getString(R.string.app_name)
+        )
+        if (intent.getStringExtra("TIMER_TITLE") == null && timerId != -1) {
+            activityScope.launch {
+                val loaded = AppDatabase.getInstance(this@TimerRingingActivity)
+                    .timerDao().getById(timerId)?.title
+                if (!loaded.isNullOrBlank()) {
+                    withContext(Dispatchers.Main) { timerTitleState.value = loaded }
+                }
+            }
+        }
 
         mediaPlayer = SoundHelper.createAlarmPlayer(this)
         mediaPlayer?.start()
@@ -77,6 +90,7 @@ class TimerRingingActivity : ComponentActivity() {
                 val timesUpText  = stringResource(R.string.times_up)
                 val restartText  = stringResource(R.string.action_restart)
                 val dismissText  = stringResource(R.string.action_dismiss)
+                val timerTitle by timerTitleState
 
                 Box(
                     modifier = Modifier

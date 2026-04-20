@@ -13,4 +13,6 @@ interface TimerRepository {
     suspend fun markPaused(id: Int, remaining: Long)
     suspend fun markResumed(id: Int, newEnd: Long)
     suspend fun updateOrderIndex(id: Int, orderIndex: Int)
+    suspend fun getNextOrderIndex(): Int
+    suspend fun deleteAndReindex(timer: TimerEntity)
 }

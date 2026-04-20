@@ -49,7 +49,7 @@ fun TimerCard(
         )
     }
 
-    LaunchedEffect(timer.id, timer.state, timer.endTimeMs) {
+    LaunchedEffect(timer.id, timer.state, timer.endTimeMs, timer.remainingMs) {
         if (timer.state == TimerState.RUNNING) {
             while (true) {
                 val now       = System.currentTimeMillis()

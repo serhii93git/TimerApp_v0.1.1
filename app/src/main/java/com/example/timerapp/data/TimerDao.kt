@@ -24,7 +24,7 @@ interface TimerDao {
     @Query("SELECT * FROM timers WHERE id = :id LIMIT 1")
     suspend fun getById(id: Int): TimerEntity?
 
-    @Query("UPDATE timers SET state = 'FINISHED' WHERE id = :id")
+    @Query("UPDATE timers SET state = 'FINISHED', remainingMs = 0 WHERE id = :id")
     suspend fun markStopped(id: Int)
 
     @Query("UPDATE timers SET state = 'PAUSED', remainingMs = :remaining WHERE id = :id")
@@ -35,4 +35,16 @@ interface TimerDao {
 
     @Query("UPDATE timers SET orderIndex = :orderIndex WHERE id = :id")
     suspend fun updateOrderIndex(id: Int, orderIndex: Int)
+
+    @Query("SELECT COALESCE(MAX(orderIndex), -1) + 1 FROM timers")
+    suspend fun getNextOrderIndex(): Int
+
+    @Transaction
+    suspend fun deleteAndReindex(timer: TimerEntity) {
+        delete(timer)
+        val remaining = getAll()
+        remaining.forEachIndexed { index, t ->
+            if (t.orderIndex != index) updateOrderIndex(t.id, index)
+        }
+    }
 }

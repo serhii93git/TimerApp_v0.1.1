@@ -20,4 +20,6 @@ class TimerRepositoryImpl @Inject constructor(
     override suspend fun markPaused(id: Int, remaining: Long) = dao.markPaused(id, remaining)
     override suspend fun markResumed(id: Int, newEnd: Long) = dao.markResumed(id, newEnd)
     override suspend fun updateOrderIndex(id: Int, orderIndex: Int) = dao.updateOrderIndex(id, orderIndex)
+    override suspend fun getNextOrderIndex(): Int = dao.getNextOrderIndex()
+    override suspend fun deleteAndReindex(timer: TimerEntity) = dao.deleteAndReindex(timer)
 }

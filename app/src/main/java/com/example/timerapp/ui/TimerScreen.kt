@@ -150,8 +150,9 @@ fun TimerScreen(viewModel: TimerViewModel = hiltViewModel()) {
             editingTimer = editTimer,
             onDismiss    = { viewModel.hideAddSheet() },
             onSave       = { title, durationMs, endTimeMs, isLooping ->
-                if (editTimer != null) {
-                    viewModel.updateTimer(editTimer!!.id, title, durationMs, endTimeMs, isLooping)
+                val editing = editTimer
+                if (editing != null) {
+                    viewModel.updateTimer(editing.id, title, durationMs, endTimeMs, isLooping)
                 } else {
                     viewModel.addTimer(title, durationMs, endTimeMs, isLooping)
                 }

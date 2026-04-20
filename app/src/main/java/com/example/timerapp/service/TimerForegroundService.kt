@@ -52,9 +52,31 @@ class TimerForegroundService : Service() {
             ACTION_STOP_TIMER      -> if (timerId != -1) stopTimer(timerId)
             ACTION_PAUSE           -> if (timerId != -1) pauseTimer(timerId)
             ACTION_RESUME          -> if (timerId != -1) resumeTimer(timerId)
-            ACTION_TIMER_COMPLETE  -> if (timerId != -1) completeFromAlarm(timerId)
+            ACTION_TIMER_COMPLETE  -> if (timerId != -1) {
+                // Fire the full-screen activity synchronously on the main thread BEFORE
+                // any DB/coroutine work. On Android 14 the BAL (Background Activity Launch)
+                // grace window after an exact-alarm broadcast is short — every coroutine
+                // hop risks losing it. Title is looked up by the activity itself.
+                launchRingingActivityNow(timerId, title = null)
+                completeFromAlarm(timerId)
+            }
         }
         return START_STICKY
+    }
+
+    private fun launchRingingActivityNow(timerId: Int, title: String?) {
+        try {
+            val ringingIntent = Intent(this, TimerRingingActivity::class.java).apply {
+                putExtra(EXTRA_TIMER_ID, timerId)
+                title?.let { putExtra("TIMER_TITLE", it) }
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            startActivity(ringingIntent)
+        } catch (_: Throwable) {
+            // Swallow — the full-screen intent in showCompletionNotification still acts as a backup.
+        }
     }
 
     private fun startTickLoop(timerId: Int) {
@@ -90,6 +112,10 @@ class TimerForegroundService : Service() {
             db.timerDao().update(updated)
             AlarmScheduler.cancel(this, timer.id)
             AlarmScheduler.schedule(this, timer.id, newEnd)
+            // Give the user something to notice on each cycle. Heads-up auto-dismisses
+            // so the shade stays clean; the timer keeps looping underneath.
+            HapticHelper.vibrate(this)
+            NotificationHelper.showLoopCycleNotification(this, timer.id, timer.title)
             NotificationHelper.showRestartedNotification(
                 this, timer.id, timer.title,
                 TimeUtils.formatMillis(timer.durationMs)
@@ -99,16 +125,10 @@ class TimerForegroundService : Service() {
             db.timerDao().markStopped(timer.id)
             AlarmScheduler.cancel(this, timer.id)
 
-            // Dual strategy: startActivity (foreground service має право) + fullScreenIntent як backup
+            // Dispatched to Main so startActivity runs on the UI thread; this is the
+            // tick-loop path (the onStartCommand path already fired the activity).
             withContext(Dispatchers.Main) {
-                val ringingIntent = Intent(this@TimerForegroundService, TimerRingingActivity::class.java).apply {
-                    putExtra(EXTRA_TIMER_ID, timer.id)
-                    putExtra("TIMER_TITLE", timer.title)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP
-                }
-                startActivity(ringingIntent)
+                launchRingingActivityNow(timer.id, timer.title)
             }
 
             NotificationHelper.showCompletionNotification(this, timer.id, timer.title)

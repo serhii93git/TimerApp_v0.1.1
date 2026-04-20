@@ -152,6 +152,36 @@ object NotificationHelper {
         manager.cancel(timerId + 10000)
     }
 
+    // Heads-up notification for looping timers — auto-dismisses so the shade
+    // doesn't pile up across cycles. No full-screen intent (we don't want to
+    // interrupt the user on every loop), haptic is triggered separately.
+    fun showLoopCycleNotification(context: Context, timerId: Int, title: String) {
+        val tapIntent = Intent(context, TimerRingingActivity::class.java).apply {
+            putExtra(TimerForegroundService.EXTRA_TIMER_ID, timerId)
+            putExtra("TIMER_TITLE", title)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val tapPi = PendingIntent.getActivity(
+            context, timerId * 10 + 6, tapIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_COMPLETION)
+            .setSmallIcon(R.drawable.ic_timer)
+            .setContentTitle(context.getString(R.string.notification_completion_title))
+            .setContentText(title)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setContentIntent(tapPi)
+            .setAutoCancel(true)
+            .setTimeoutAfter(4_000L)
+            .build()
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(timerId + 20000, notification)
+    }
+
     fun showRestartedNotification(context: Context, timerId: Int, title: String, timeLeft: String) {
         val notification = buildPersistentNotification(context, title, timeLeft, timerId, false)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

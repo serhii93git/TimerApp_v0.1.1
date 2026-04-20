@@ -28,6 +28,15 @@
     <string name="permission_notifications">Notifications</string>
     <string name="permission_exact_alarm">Exact Alarms</string>
     <string name="permission_battery">Battery Optimisation</string>
+    <string name="permission_fullscreen">Full-Screen Alarms</string>
+    <string name="permission_overlay">Display Over Other Apps</string>
+
+    <string name="perm_dialog_fsi_title">Full-Screen Alarms</string>
+    <string name="perm_dialog_fsi_body">Required so the alarm screen appears over the lock screen when a timer finishes. Without this, only a silent notification appears.</string>
+    <string name="perm_dialog_overlay_title">Display Over Other Apps</string>
+    <string name="perm_dialog_overlay_body">Required so the alarm screen pops up while you\'re using another app or watching a video. Without this, the alarm may not appear when the screen is unlocked.</string>
+    <string name="perm_dialog_grant">Open Settings</string>
+    <string name="perm_dialog_later">Later</string>
 
     <string name="no_timers">No timers yet.\nTap + to add one.</string>
     <string name="drag_handle">Drag to reorder</string>

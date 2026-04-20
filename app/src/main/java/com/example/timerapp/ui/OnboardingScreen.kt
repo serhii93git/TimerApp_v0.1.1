@@ -1,6 +1,7 @@
 package com.example.timerapp.ui
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -26,19 +27,64 @@ import kotlinx.coroutines.delay
 fun OnboardingScreen(onComplete: () -> Unit) {
     val context = LocalContext.current
 
-    val titleText        = stringResource(R.string.onboarding_title)
-    val bodyText         = stringResource(R.string.onboarding_body)
-    val permNotifText    = stringResource(R.string.permission_notifications)
-    val permAlarmText    = stringResource(R.string.permission_exact_alarm)
-    val permBatteryText  = stringResource(R.string.permission_battery)
+    val titleText         = stringResource(R.string.onboarding_title)
+    val bodyText          = stringResource(R.string.onboarding_body)
+    val permNotifText     = stringResource(R.string.permission_notifications)
+    val permAlarmText     = stringResource(R.string.permission_exact_alarm)
+    val permBatteryText   = stringResource(R.string.permission_battery)
+    val permFsiText       = stringResource(R.string.permission_fullscreen)
+    val permOverlayText   = stringResource(R.string.permission_overlay)
 
     // FIX: Reduced from 10 to 3 seconds — 10s felt excessive
     var countdown by remember { mutableIntStateOf(3) }
     var step      by remember { mutableIntStateOf(0) }
 
-    val batteryLauncher = rememberLauncherForActivityResult(
+    // Defined up front so earlier launchers can chain into the later steps.
+    val overlayLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { onComplete() }
+
+    fun launchOverlayOrFinish() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            !Settings.canDrawOverlays(context)
+        ) {
+            step = 5
+            val overlayIntent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:${context.packageName}")
+            )
+            try { overlayLauncher.launch(overlayIntent) }
+            catch (_: Exception) { onComplete() }
+        } else {
+            onComplete()
+        }
+    }
+
+    val fsiLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { launchOverlayOrFinish() }
+
+    fun launchFsiOrNext() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val nm = context.getSystemService(NotificationManager::class.java)
+            if (nm?.canUseFullScreenIntent() == false) {
+                step = 4
+                val fsiIntent = Intent(
+                    Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                    Uri.parse("package:${context.packageName}")
+                )
+                try {
+                    fsiLauncher.launch(fsiIntent)
+                    return
+                } catch (_: Exception) { /* fall through */ }
+            }
+        }
+        launchOverlayOrFinish()
+    }
+
+    val batteryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { launchFsiOrNext() }
 
     val alarmLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -55,7 +101,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             }
         }
         try { batteryLauncher.launch(batteryIntent) }
-        catch (e: Exception) { onComplete() }
+        catch (e: Exception) { launchFsiOrNext() }
     }
 
     val notifLauncher = rememberLauncherForActivityResult(
@@ -76,7 +122,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                         Uri.parse("package:${context.packageName}"))
                 }
                 try { batteryLauncher.launch(batteryIntent) }
-                catch (e3: Exception) { onComplete() }
+                catch (e3: Exception) { launchFsiOrNext() }
             }
         } else {
             step = 3
@@ -85,7 +131,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                     Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                         Uri.parse("package:${context.packageName}"))
                 )
-            } catch (e: Exception) { onComplete() }
+            } catch (e: Exception) { launchFsiOrNext() }
         }
     }
 
@@ -103,9 +149,9 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 val alarmIntent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
                     Uri.parse("package:${context.packageName}"))
                 try { alarmLauncher.launch(alarmIntent) }
-                catch (e: Exception) { onComplete() }
+                catch (e: Exception) { launchFsiOrNext() }
             } else {
-                onComplete()
+                launchFsiOrNext()
             }
         }
     }
@@ -138,7 +184,13 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             )
             Spacer(Modifier.height(32.dp))
 
-            listOf(permNotifText, permAlarmText, permBatteryText).forEach { label ->
+            listOf(
+                permNotifText,
+                permAlarmText,
+                permBatteryText,
+                permFsiText,
+                permOverlayText
+            ).forEach { label ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
