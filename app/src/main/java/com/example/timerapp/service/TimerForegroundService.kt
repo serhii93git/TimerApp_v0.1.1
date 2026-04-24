@@ -121,10 +121,6 @@ class TimerForegroundService : Service() {
             // on Dismiss/Skip — if the service starts a second infinite waveform
             // AFTER the activity cancels its own, nothing tears V2 down.
             NotificationHelper.showLoopCycleNotification(this, timer.id, timer.title)
-            NotificationHelper.showRestartedNotification(
-                this, timer.id, timer.title,
-                TimeUtils.formatMillis(timer.durationMs)
-            )
             startTickLoop(timer.id)
         } else {
             db.timerDao().markStopped(timer.id)
