@@ -25,7 +25,7 @@ class TimerActionReceiver : BroadcastReceiver() {
                     "ACTION_DISMISS" -> {
                         dao.markStopped(timerId)
                         AlarmScheduler.cancel(context, timerId)
-                        NotificationHelper.cancelCompletionNotification(context, timerId)
+                        NotificationHelper.cancelAllForTimer(context, timerId)
                         TimerGlanceWidget.updateState(context)
                     }
                     "ACTION_RESTART" -> {

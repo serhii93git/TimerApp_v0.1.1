@@ -152,6 +152,17 @@ object NotificationHelper {
         manager.cancel(timerId + 10000)
     }
 
+    // Cancels every notification that could have been posted for this timer:
+    // showRestartedNotification(id=timerId), showCompletionNotification(id+10000),
+    // showLoopCycleNotification(id+20000). Used on full timer stop so nothing
+    // stale lingers in the shade after the user stops a loop.
+    fun cancelAllForTimer(context: Context, timerId: Int) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancel(timerId)
+        manager.cancel(timerId + 10000)
+        manager.cancel(timerId + 20000)
+    }
+
     // Heads-up notification for looping timers — auto-dismisses so the shade
     // doesn't pile up across cycles. No full-screen intent (we don't want to
     // interrupt the user on every loop), haptic is triggered separately.

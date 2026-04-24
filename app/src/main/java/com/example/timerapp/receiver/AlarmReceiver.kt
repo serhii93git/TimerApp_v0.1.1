@@ -28,6 +28,8 @@ class AlarmReceiver : BroadcastReceiver() {
             // and launching synchronously from onReceive maximises the chance the
             // activity pops before the BAL grace window closes.
             runCatching {
+                // Fresh ring → clear any prior "dismissed" mark for this id.
+                TimerRingingActivity.onNewRing(timerId)
                 val ringingIntent = Intent(context, TimerRingingActivity::class.java).apply {
                     putExtra(TimerForegroundService.EXTRA_TIMER_ID, timerId)
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or

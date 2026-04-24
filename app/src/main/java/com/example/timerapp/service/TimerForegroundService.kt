@@ -53,6 +53,10 @@ class TimerForegroundService : Service() {
             ACTION_PAUSE           -> if (timerId != -1) pauseTimer(timerId)
             ACTION_RESUME          -> if (timerId != -1) resumeTimer(timerId)
             ACTION_TIMER_COMPLETE  -> if (timerId != -1) {
+                // Fresh ring entry-point → clear any prior "dismissed" mark so the
+                // activity can start anew. (Prevents a stale mark from an earlier
+                // ring of the same id from blocking this ring.)
+                TimerRingingActivity.onNewRing(timerId)
                 // Fire the full-screen activity synchronously on the main thread BEFORE
                 // any DB/coroutine work. On Android 14 the BAL (Background Activity Launch)
                 // grace window after an exact-alarm broadcast is short — every coroutine
@@ -112,9 +116,10 @@ class TimerForegroundService : Service() {
             db.timerDao().update(updated)
             AlarmScheduler.cancel(this, timer.id)
             AlarmScheduler.schedule(this, timer.id, newEnd)
-            // Give the user something to notice on each cycle. Heads-up auto-dismisses
-            // so the shade stays clean; the timer keeps looping underneath.
-            HapticHelper.vibrate(this)
+            // Vibration is owned by TimerRingingActivity (launched above). Calling
+            // HapticHelper.vibrate here would race with the activity's stopAlarm()
+            // on Dismiss/Skip — if the service starts a second infinite waveform
+            // AFTER the activity cancels its own, nothing tears V2 down.
             NotificationHelper.showLoopCycleNotification(this, timer.id, timer.title)
             NotificationHelper.showRestartedNotification(
                 this, timer.id, timer.title,
@@ -132,7 +137,8 @@ class TimerForegroundService : Service() {
             }
 
             NotificationHelper.showCompletionNotification(this, timer.id, timer.title)
-            HapticHelper.vibrate(this)
+            // Vibration is owned by TimerRingingActivity (launched above). See the
+            // looping branch comment for why the service must not vibrate here.
         }
     }
 
@@ -156,6 +162,12 @@ class TimerForegroundService : Service() {
             tickJobs.remove(timerId)
             db.timerDao().markStopped(timerId)
             AlarmScheduler.cancel(this@TimerForegroundService, timerId)
+            // Clear any stale completion/loop-cycle/restart notifications for this
+            // timer so a loop stop doesn't leave frozen entries in the shade.
+            NotificationHelper.cancelAllForTimer(this@TimerForegroundService, timerId)
+            // Belt-and-suspenders: if a previous ring's activity died without
+            // cleaning up (process kill during vibrate), cancel any stray waveform.
+            HapticHelper.cancel(this@TimerForegroundService)
             TimerGlanceWidget.updateState(this@TimerForegroundService)
             maybeStopSelf()
         }

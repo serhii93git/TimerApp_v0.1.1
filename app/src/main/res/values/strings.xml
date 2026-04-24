@@ -16,6 +16,8 @@
     <string name="action_delete">Delete</string>
     <string name="action_dismiss">Dismiss</string>
     <string name="action_restart">Restart</string>
+    <string name="action_skip">Skip</string>
+    <string name="action_stop_loop">Stop Loop</string>
     <string name="action_add">Add Timer</string>
 
     <string name="timer_paused">Paused</string>
